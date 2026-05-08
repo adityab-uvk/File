@@ -1,0 +1,60 @@
+USE [SalesOrder31M]
+GO
+
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[PlantDropdown_ForUser]
+    @PageNumber INT = 1,
+    @PageSize   INT = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    --------------------------------------------------
+    -- Hardcoded Parameters
+    --------------------------------------------------
+    DECLARE @CompanyCode BIGINT = 1049;
+    DECLARE @UserCode NVARCHAR(50) = '25019858';
+    DECLARE @RoleId INT = 5;
+
+    --------------------------------------------------
+    -- Pagination Calculation
+    --------------------------------------------------
+    DECLARE @Offset INT;
+
+    SET @Offset = (@PageNumber - 1) * @PageSize;
+
+    --------------------------------------------------
+    -- Role 5,6,7 → All Plants
+    --------------------------------------------------
+    IF (@RoleId IN (5,6,7))
+    BEGIN
+        ;WITH PlantCTE AS
+        (
+            SELECT DISTINCT
+                TRIM(CM.Plant) AS Plant
+            FROM dbo.TB_CustomerMaster CM
+            WHERE CM.CompanyCode = @CompanyCode
+              AND TRIM(ISNULL(CM.Plant,'')) <> ''
+        )
+
+        SELECT 
+            Plant
+        FROM PlantCTE
+        ORDER BY Plant
+        OFFSET @Offset ROWS
+        FETCH NEXT @PageSize ROWS ONLY;
+
+        RETURN;
+    END
+
+    --------------------------------------------------
+    -- Other Roles → Empty
+    --------------------------------------------------
+    SELECT TOP 0 CAST(NULL AS NVARCHAR(50)) AS Plant;
+
+END
+GO
